@@ -61,6 +61,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
+                // 初始化每一个 NioEventLoop.
                 children[i] = newChild(threadFactory, args);
                 success = true;
             } catch (Exception e) {
@@ -218,6 +219,10 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     }
 
     private final class PowerOfTwoEventExecutorChooser implements EventExecutorChooser {
+        /**
+         * 获取下一个eventLoop.
+         * 和GenericEventExecutorChooser.next()中的 % 效果相同.
+         */
         @Override
         public EventExecutor next() {
             return children[childIndex.getAndIncrement() & children.length - 1];

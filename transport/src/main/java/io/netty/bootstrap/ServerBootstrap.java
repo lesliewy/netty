@@ -178,6 +178,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             @Override
             public void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
+                // 返回的是 handler 字段, 即在服务器端的启动代码中设置的handler(xxx)
+                // 将此handler添加到pipeline 中。
                 ChannelHandler handler = handler();
                 if (handler != null) {
                     pipeline.addLast(handler);

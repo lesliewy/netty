@@ -130,12 +130,24 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         javaChannel().close();
     }
 
+    /**
+     * client 连接到 server 时, Java 底层的 NIO ServerSocketChannel 会有一个
+     * SelectionKey.OP_ACCEPT 就绪事件, 接着就会调用到
+     */
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
+        // 通过 javaChannel().accept() 获取到客户端新连接的 SocketChannel,
         SocketChannel ch = javaChannel().accept();
 
         try {
             if (ch != null) {
+
+                /**
+                 * 实例化一个 NioSocketChannel, 并且传入 NioServerSocketChannel 对象.
+                 * 即新生成的NioSocketChannel 的父 Channel 就是 NioServerSocketChannel 实例
+                 * 经由 Netty 的 ChannelPipeline 机制, 将读取事件逐级发送到各个 handler 中,
+                 * 于是就会触发前面我们提到的 ServerBootstrapAcceptor.channelRead 方法
+                 */
                 buf.add(new NioSocketChannel(this, ch));
                 return 1;
             }

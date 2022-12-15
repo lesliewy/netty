@@ -460,6 +460,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
             return promise;
         }
 
+        // 从 DefaultChannelPipeline 内的双向链表的 tail 开始, 不断向前寻找第一个 outbound 为 true 的 AbstractChannelHandlerContext, 然后调用它的 invokeConnect 方法
         final AbstractChannelHandlerContext next = findContextOutbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {

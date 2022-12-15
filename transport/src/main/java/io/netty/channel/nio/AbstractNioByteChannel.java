@@ -114,8 +114,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 int totalReadAmount = 0;
                 boolean readPendingReset = false;
                 do {
+                    // 1, 分配 ByteBuf
                     byteBuf = allocHandle.allocate(allocator);
                     int writable = byteBuf.writableBytes();
+                    // 2, 从 SocketChannel 中读取数据
                     int localReadAmount = doReadBytes(byteBuf);
                     if (localReadAmount <= 0) {
                         // not was read release the buffer
@@ -151,6 +153,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     }
                 } while (++ messages < maxMessagesPerRead);
 
+                // 调用 pipeline.fireChannelRead 发送一个 inbound 事件.这里是 pipeline中 inbound 事件起点.
+                // 此事件会以 head -> customContext -> tail 的方向依次流经 ChannelPipeline 中的各个 handler.
+                //调用了 pipeline.fireChannelRead 后, 就是 ChannelPipeline 中所需要做的工作了
                 pipeline.fireChannelReadComplete();
                 allocHandle.record(totalReadAmount);
 

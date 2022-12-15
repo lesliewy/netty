@@ -79,7 +79,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected AbstractChannel(Channel parent) {
         this.parent = parent;
+        // unsafe 封装了对 Java 底层 Socket 的操作, 因此实际上是沟通 Netty 上层和 Java 底层的重要的桥梁.
         unsafe = newUnsafe();
+        /**
+         * NioSocketChannel 默认构造函数会调用到这里.
+         * 新建一个channel. 这里体现了:Each channel has its own pipeline and it is created automatically when a new channel is created.
+         * 这里this是NioSocketChannel
+         */
         pipeline = new DefaultChannelPipeline(this);
     }
 

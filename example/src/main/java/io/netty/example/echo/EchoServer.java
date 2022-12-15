@@ -32,6 +32,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * Echoes back any received data from a client.
+ * 1, run EchoServer.
+ * 2, telnet localhost 8007
  */
 public final class EchoServer {
 
@@ -56,7 +58,9 @@ public final class EchoServer {
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
+             // handler 字段与 accept 过程有关, 即这个 handler 负责处理客户端的连接请求
              .handler(new LoggingHandler(LogLevel.INFO))
+             // childHandler 就是负责和客户端的连接的 IO 交互.
              .childHandler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {

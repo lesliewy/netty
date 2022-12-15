@@ -54,8 +54,14 @@ public final class EchoClient {
         // Configure the client.
         EventLoopGroup group = new NioEventLoopGroup();
         try {
+            /**
+             * 客户端需要3个: EventLoopGroup, NioSocketChannel, handler.
+             * 在 Netty 中, Channel 是一个 Socket 的抽象, 它为用户提供了关于 Socket 状态(是否是连接还是断开) 以及对 Socket 的读写等操作.
+             * 每当 Netty 建立了一个连接后, 都会有一个对应的 Channel 实例.
+              */
             Bootstrap b = new Bootstrap();
             b.group(group)
+             // channel 的实例化即调用此处的 clazz.newInstance(). 因此会调用NioSocketChannel的默认构造器.
              .channel(NioSocketChannel.class)
              .option(ChannelOption.TCP_NODELAY, true)
              .handler(new ChannelInitializer<SocketChannel>() {
@@ -70,7 +76,7 @@ public final class EchoClient {
                  }
              });
 
-            // Start the client.
+            // Start the client.  包括: channel注册;
             ChannelFuture f = b.connect(HOST, PORT).sync();
 
             // Wait until the connection is closed.

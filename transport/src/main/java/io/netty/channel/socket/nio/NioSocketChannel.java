@@ -67,6 +67,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     /**
      * Create a new instance
+     * 打开一个新的 Java NIO.
      */
     public NioSocketChannel() {
         this(newSocket(DEFAULT_SELECTOR_PROVIDER));
@@ -206,6 +207,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         boolean success = false;
         try {
+            // 调用 SocketChannel.connect 方法完成 Java NIO 层面上的 Socket 的连接.
             boolean connected = javaChannel().connect(remoteAddress);
             if (!connected) {
                 selectionKey().interestOps(SelectionKey.OP_CONNECT);

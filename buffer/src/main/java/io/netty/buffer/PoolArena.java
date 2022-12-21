@@ -44,9 +44,19 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     final int chunkSize;
     final int subpageOverflowMask;
     final int numSmallSubpagePools;
+    /**
+     * 小内存分配.
+     * 相同规格大小(elemSize)的PoolSubpage组成链表，不同规格的PoolSubpage链表的head则分别保存在tinySubpagePools 或者 smallSubpagePools数组中
+     * tinySubpagePools: 数组长度32，实际使用域从index = 1开始，对应31种tiny规格PoolSubpage
+     * smallSubpagePools: 数组长度4，对应4种small规格PoolSubpage.
+     */
     private final PoolSubpage<T>[] tinySubpagePools;
     private final PoolSubpage<T>[] smallSubpagePools;
 
+    /**
+     * 按照chunk不同的使用率划分成多个list, 组成双向链表。cur中如果无法满足分配要求，会继续查找cur.next
+     * allocateNormal(): 优先从chunkList中分配。无法分配情况下，新建chunk,按照找使用率添加到chunkList中.
+     */
     private final PoolChunkList<T> q050;
     private final PoolChunkList<T> q025;
     private final PoolChunkList<T> q000;
@@ -128,6 +138,13 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     abstract boolean isDirect();
 
+    /**
+     * 分配内存。
+     * @param cache
+     * @param reqCapacity
+     * @param maxCapacity
+     * @return
+     */
     PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
         PooledByteBuf<T> buf = newByteBuf(maxCapacity);
         allocate(cache, buf, reqCapacity);
@@ -233,6 +250,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         qInit.add(c);
     }
 
+    /**
+     * 对于申请分配大小超过chunkSize的巨型对象(huge)，Netty采用的是非池化管理策略.
+     * 内存释放：destroyChunk().
+     * @param buf
+     * @param reqCapacity
+     */
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
         allocationsHuge.increment();
         buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
@@ -303,6 +326,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         return table[tableIdx];
     }
 
+    /**
+     * 取最近的2的幂的值.
+     * @param reqCapacity
+     * @return
+     */
     int normalizeCapacity(int reqCapacity) {
         if (reqCapacity < 0) {
             throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
@@ -605,6 +633,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected PoolChunk<byte[]> newUnpooledChunk(int capacity) {
+            /** 直接new byte[]. 参考DirectArena */
             return new PoolChunk<byte[]>(this, new byte[capacity], capacity);
         }
 
@@ -648,6 +677,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected PoolChunk<ByteBuffer> newUnpooledChunk(int capacity) {
+            /** 使用java.nio, 分配直接内存. 参考HeapArena. */
             return new PoolChunk<ByteBuffer>(this, ByteBuffer.allocateDirect(capacity), capacity);
         }
 

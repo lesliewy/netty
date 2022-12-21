@@ -41,6 +41,11 @@ import java.util.Set;
  * @param <V> the type of the thread-local variable
  * @see ThreadLocal
  */
+
+/**
+ * FastThreadLocalThread, InternalThreadLocalMap(在FastThreadLocalThread中) 重新设计.
+ * get(): InternalThreadLocalMap中使用了array, 更快的查找.
+ */
 public class FastThreadLocal<V> {
 
     private static final int variablesToRemoveIndex = InternalThreadLocalMap.nextVariableIndex();

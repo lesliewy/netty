@@ -106,6 +106,12 @@ final class PoolChunk<T> implements PoolChunkMetric {
     final T memory;
     final boolean unpooled;
 
+    /** 完全平衡树，该平衡树的多个层级深度，就是按照不同粒度对chunk进行的多层分组
+     * memoryMap[id] = depth_of_id： id节点空闲 ， 初始状态，depth_of_id的值代表id节点在树中的深度
+     * memoryMap[id] = maxOrder + 1： id节点全部已使用 ，节点内存已完全分配，没有一个子节点空闲
+     * depth_of_id < memoryMap[id] < maxOrder + 1： id节点部分已使用 ，memoryMap[id] 的值 x，代表 id的子节点中，第一个空闲节点位于深度x，
+     * 在深度[depth_of_id, x)的范围内没有任何空闲节点
+     */
     private final byte[] memoryMap;
     private final byte[] depthMap;
     private final PoolSubpage<T>[] subpages;
@@ -113,6 +119,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private final int subpageOverflowMask;
     private final int pageSize;
     private final int pageShifts;
+    /** 平衡树的最大深度 */
     private final int maxOrder;
     private final int chunkSize;
     private final int log2ChunkSize;
@@ -199,6 +206,11 @@ final class PoolChunk<T> implements PoolChunkMetric {
         return 100 - freePercentage;
     }
 
+    /**
+     * 分配内存.
+     * @param normCapacity
+     * @return
+     */
     long allocate(int normCapacity) {
         if ((normCapacity & subpageOverflowMask) != 0) { // >= pageSize
             return allocateRun(normCapacity);
@@ -259,6 +271,15 @@ final class PoolChunk<T> implements PoolChunkMetric {
      * @param d depth
      * @return index in memoryMap
      */
+    /**
+     * 步骤1 判断是否当前节点值memoryMap[id] > d 如果是，则无法从该chunk分配内存，查找结束
+     * 步骤2 判断是否节点值memoryMap[id] == d，且depth_of_id == h， 如果是，当前节点是depth = d的空闲内存，查找结束，
+     *       更新当前节点值为memoryMap[id] = max_order + 1，代表节点已使用，并遍历当前节点的所有祖先节点，更新节点值为各自的左右子节点值的最小值； 如果否，执行步骤3
+     * 步骤3 判断是否当前节点值memoryMap[id] <= d，且depth_of_id < h， 如果是，则空闲节点在当前节点的子节点中，则先判断左子节点memoryMap[2 * id] <=d(判断左子节点是否可分配)，
+     *       如果成立，则当前节点更新为左子节点，否则更新为右子节点，然后重复步骤2
+     * @param d
+     * @return
+     */
     private int allocateNode(int d) {
         int id = 1;
         int initial = - (1 << d); // has last d bits = 0 and rest all = 1
@@ -288,6 +309,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
      * @param normCapacity normalized capacity
      * @return index in memoryMap
      */
+    /** 当分配已归一化处理后大小为chunkSize/2^d的内存，即需要在depth = d的层级中找到第一块空闲内存 */
     private long allocateRun(int normCapacity) {
         int d = maxOrder - (log2(normCapacity) - pageShifts);
         int id = allocateNode(d);
